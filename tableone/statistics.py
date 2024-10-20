@@ -165,16 +165,19 @@ class Statistics:
         # continuous
         if (is_continuous and is_normal and len(grouped_data) == 2
                 and min_observed >= 2):
+            print("Using two sample t-test for variable: " + str(v))
             ptest = 'Two Sample T-test'
             test_stat, pval = stats.ttest_ind(*grouped_data.values(),
                                               equal_var=False,
                                               nan_policy="omit")
         elif is_continuous and is_normal:
             # normally distributed
+            print("Using one-way ANOVA for variable: " + str(v))
             ptest = 'One-way ANOVA'
             test_stat, pval = stats.f_oneway(*grouped_data.values())
         elif is_continuous and not is_normal:
             # non-normally distributed
+            print("Using Kruskal-Wallis test for variable: " + str(v))
             ptest = 'Kruskal-Wallis'
             test_stat, pval = stats.kruskal(*grouped_data.values())
         # categorical
@@ -185,13 +188,18 @@ class Statistics:
             _, pval, _, expected = stats.chi2_contingency(
                 grouped_val_list)
             # if any expected cell counts are < 5, chi2 may not be valid
+            # if expected.min() < 5 or min_observed < 5:
+            # TODO: [mfbolus] trying to force categorical 2x2 to be fisher exact
             # if this is a 2x2, switch to fisher exact
-            if expected.min() < 5 or min_observed < 5:
+            min_samples = 1000
+            if expected.min() < min_samples or min_observed < min_samples:
                 if np.shape(grouped_val_list) == (2, 2):
+                    print("Using Fisher's exact for min_observed = " + str(min_observed) + " for variable: " + v)
                     ptest = "Fisher's exact"
                     odds_ratio, pval = stats.fisher_exact(grouped_val_list)
                 else:
-                    ptest = "Chi-squared (warning: expected count < 5)"
+                    print("Using chi-squared test for min_observed = " + str(min_observed) + " for variable: " + v)
+                    ptest = "Chi-squared (warning: expected count < " + str(min_samples) + ")"
                     chi_warn = ("Chi-squared tests for the following "
                                 "variables may be invalid due to the low "
                                 "number of observations")
